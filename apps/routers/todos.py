@@ -1,13 +1,15 @@
-
-from fastapi import APIRouter, HTTPException, status, Path, Depends
-from sqlalchemy.orm import Session
-from typing import List, Annotated
 from datetime import datetime
+from typing import Annotated, List
+
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+from sqlalchemy.orm import Session
 
 from apps.config.db import SessionLocal
-from apps.models.models import Todos, TodoRequestSchema, TodoResponseSchema
+from apps.models.models import Todos
+from apps.models.schema import TodoRequestSchema, TodoResponseSchema
 
 router = APIRouter()
+
 
 # ================= DEPENDENCY =================
 def get_db():
@@ -17,16 +19,19 @@ def get_db():
     finally:
         db.close()
 
+
 db_dependency = Annotated[Session, Depends(get_db)]
 
 # ================= CREATE TABLES =================
 Todos.metadata.create_all(bind=SessionLocal().bind)
+
 
 # ================= GET ALL TODOS =================
 @router.get("/", response_model=List[TodoResponseSchema])
 async def get_all(db: db_dependency):
     todos = db.query(Todos).all()
     return todos
+
 
 # ================= GET SINGLE TODO =================
 @router.get("/{todo_id}", response_model=TodoResponseSchema)
@@ -36,8 +41,11 @@ async def get_todo(todo_id: int = Path(gt=0), db: db_dependency = db_dependency)
         raise HTTPException(status_code=404, detail="Todo not found")
     return todo
 
+
 # ================= CREATE TODO =================
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=TodoResponseSchema)
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=TodoResponseSchema
+)
 async def create_todo(db: db_dependency, todo_request: TodoRequestSchema):
     todo_model = Todos(
         **todo_request.model_dump(),
@@ -49,9 +57,14 @@ async def create_todo(db: db_dependency, todo_request: TodoRequestSchema):
     db.refresh(todo_model)
     return todo_model
 
+
 # ================= UPDATE TODO =================
 @router.put("/{todo_id}", response_model=TodoResponseSchema)
-async def update_todo(todo_id: int = Path(gt=0), todo_request: TodoRequestSchema = None, db: db_dependency = db_dependency):
+async def update_todo(
+    todo_id: int = Path(gt=0),
+    todo_request: TodoRequestSchema = None,
+    db: db_dependency = db_dependency,
+):
     todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
     if not todo_model:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -65,6 +78,7 @@ async def update_todo(todo_id: int = Path(gt=0), todo_request: TodoRequestSchema
     db.commit()
     db.refresh(todo_model)
     return todo_model
+
 
 # ================= DELETE TODO =================
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
