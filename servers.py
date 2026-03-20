@@ -7,4 +7,4 @@ app = FastAPI()
 
 # Include the todos router
 app.include_router(todos.router, tags=["Todos"])
-app.include_router(auth.router, tags=["Auth"])
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
