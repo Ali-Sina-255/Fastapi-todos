@@ -8,3 +8,8 @@ class UserSchema(BaseModel):
     first_name: str
     last_name: str
     role: str
+
+
+class TokenSchema(BaseModel):
+    access_token: str
+    token_type: str
