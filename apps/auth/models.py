@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from psycopg import Column
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from apps.config.db import Base
 
@@ -15,4 +17,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     role = Column(String)
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )

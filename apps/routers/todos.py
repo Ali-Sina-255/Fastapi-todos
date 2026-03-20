@@ -4,6 +4,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
+from apps.auth.utils import get_current_user
 from apps.config.db import SessionLocal
 from apps.models.models import Todos
 from apps.models.schema import TodoRequestSchema, TodoResponseSchema
@@ -21,6 +22,7 @@ def get_db():
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # ================= CREATE TABLES =================
 Todos.metadata.create_all(bind=SessionLocal().bind)
@@ -28,8 +30,9 @@ Todos.metadata.create_all(bind=SessionLocal().bind)
 
 # ================= GET ALL TODOS =================
 @router.get("/", response_model=List[TodoResponseSchema])
-async def get_all(db: db_dependency):
-    todos = db.query(Todos).all()
+async def get_all(user: user_dependency, db: db_dependency):
+    # todos = db.query(Todos).filter(Todos.owner == user["user_id"]).all()
+    todos = db.query(Todos).filter(Todos.owner == user.id).all()
     return todos
 
 
@@ -46,16 +49,23 @@ async def get_todo(todo_id: int = Path(gt=0), db: db_dependency = db_dependency)
 @router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=TodoResponseSchema
 )
-async def create_todo(db: db_dependency, todo_request: TodoRequestSchema):
-    todo_model = Todos(
+async def create_todo(
+    user: user_dependency, db: db_dependency, todo_request: TodoRequestSchema
+):
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication is Failed"
+        )
+    todo = Todos(
         **todo_request.model_dump(),
+        owner=user.get("user_id"),
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
-    db.add(todo_model)
+    db.add(todo)
     db.commit()
-    db.refresh(todo_model)
-    return todo_model
+    db.refresh(todo)
+    return todo
 
 
 # ================= UPDATE TODO =================

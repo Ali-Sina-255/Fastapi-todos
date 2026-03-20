@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from apps.auth.models import User
-from apps.auth.schema import TokenSchema, UserSchema
+from apps.auth.schema import TokenSchema, UserResponseSchema, UserSchema
 from apps.auth.utils import create_access_token
 from apps.config.db import SessionLocal
 from apps.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES
@@ -26,6 +26,11 @@ def get_db():
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+
+
+@router.get("/users", response_model=List[UserResponseSchema])
+async def get_users(db: db_dependency):
+    return db.query(User).all()
 
 
 # ================= AUTH =================
@@ -81,8 +86,3 @@ async def login_for_access_token(
     )
 
     return {"access_token": token, "token_type": "bearer"}
-
-
-@router.get("/users")
-async def get_users(db: db_dependency):
-    return db.query(User).all()
