@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from apps.auth.models import User
 from apps.auth.schema import TokenSchema, UserResponseSchema, UserSchema
-from apps.auth.utils import create_access_token
+from apps.auth.utils import authenticate_user, create_access_token, get_current_user
 from apps.config.db import SessionLocal
 from apps.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -26,24 +26,12 @@ def get_db():
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 
 @router.get("/users", response_model=List[UserResponseSchema])
 async def get_users(db: db_dependency):
     return db.query(User).all()
-
-
-# ================= AUTH =================
-def authenticate_user(db, username: str, password: str):
-    user = db.query(User).filter(User.username == username).first()
-
-    if not user:
-        return False
-
-    if not bcrypt_context.verify(password, user.hashed_password):
-        return False
-
-    return user
 
 
 # ================= ROUTES =================
@@ -56,6 +44,7 @@ async def create_user(db: db_dependency, create_user_request: UserSchema):
         last_name=create_user_request.last_name,
         role=create_user_request.role,
         is_active=True,
+        phone_number=create_user_request.phone_number,
         hashed_password=bcrypt_context.hash(create_user_request.password),
     )
 
@@ -86,3 +75,19 @@ async def login_for_access_token(
     )
 
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/change-phone-number", status_code=status.HTTP_204_NO_CONTENT)
+async def change_phone_number(
+    user: user_dependency,
+    db: db_dependency,
+    new_phone_number: str,
+):
+
+    user = db.query(User).filter(User.id == user.id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.phone_number = new_phone_number
+    db.add(user)
+    db.commit()

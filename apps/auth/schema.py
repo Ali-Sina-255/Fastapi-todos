@@ -10,6 +10,7 @@ class UserSchema(BaseModel):
     first_name: str
     last_name: str
     role: str
+    phone_number: str
 
 
 class UserResponseSchema(BaseModel):
@@ -19,6 +20,7 @@ class UserResponseSchema(BaseModel):
     first_name: str
     last_name: str
     role: str
+    phone_number: str
     hashed_password: str
     created_at: datetime
     updated_at: datetime

@@ -119,7 +119,7 @@ async def update_todo(
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(
     user: user_dependency,
-    db: db_dependency = db_dependency,
+    db: db_dependency = db_dependency,  # type: ignore
     todo_id: int = Path(gt=0),
 ):
     if user is None:
@@ -130,7 +130,7 @@ async def delete_todo(
     todo_model = (
         db.query(Todos)
         .filter(Todos.id == todo_id)
-        .filter(Todos.owner == user.id)
+        .filter(Todos.owner == user.id)  # type: ignore
         .first()
     )
     if not todo_model:

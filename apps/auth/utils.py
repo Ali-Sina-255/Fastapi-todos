@@ -4,6 +4,7 @@ from typing import Annotated
 import jwt  # type: ignore
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from apps.auth.models import User
@@ -19,6 +20,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(username: str, user_id: int, expires_delta: timedelta):
@@ -58,4 +62,17 @@ def get_current_user(
     user_id = payload.get("id")
 
     user = db.query(User).filter(User.id == user_id).first()
+    return user
+
+
+# ================= AUTH =================
+def authenticate_user(db, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+
+    if not user:
+        return False
+
+    if not bcrypt_context.verify(password, user.hashed_password):
+        return False
+
     return user
